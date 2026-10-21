@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simulasi Fungsi Kuadrat: Lemparan Basket</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-900 text-slate-100 font-sans p-4 md:p-6 min-h-screen">
+
+    <div class="max-w-6xl mx-auto space-y-6">
+        <!-- Header -->
+        <header class="bg-slate-800 p-5 rounded-2xl border border-slate-700 shadow-xl flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+            <div>
+                <h1 class="text-2xl font-bold text-amber-400 flex items-center gap-2">
+                    🏀 Media Pembelajaran: Aplikasi Fungsi Kuadrat
+                </h1>
+                <p class="text-slate-400 text-sm mt-1">
+                    Persamaan Parabola Lintasan Bola: <span class="text-amber-300 font-mono font-semibold">f(x) = ax² + bx + c</span>
+                </p>
+            </div>
+            <div id="statusBadge" class="px-4 py-2 rounded-xl text-sm font-bold bg-slate-700 text-slate-300 border border-slate-600">
+                Atur parameter & tekan Lempar
+            </div>
+        </header>
+
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+            
+            <!-- Panel Kontrol Input -->
+            <div class="lg:col-span-4 bg-slate-800 p-5 rounded-2xl border border-slate-700 space-y-5 shadow-lg">
+                <h2 class="text-lg font-bold text-slate-200 border-b border-slate-700 pb-2">Kontrol Parabola & Target</h2>
+
+                <!-- Slider Jarak Ring -->
+                <div class="bg-slate-900/80 p-3.5 rounded-xl border border-amber-500/30">
+                    <div class="flex justify-between text-sm font-semibold mb-1">
+                        <label for="sliderRing" class="text-amber-400">📍 Jarak Ring Basket (m)</label>
+                        <span id="valRing" class="text-amber-400 font-mono">6.5 m</span>
+                    </div>
+                    <input type="range" id="sliderRing" min="4.0" max="10.0" step="0.2" value="6.5" class="w-full accent-amber-500 cursor-pointer">
+                </div>
+
+                <!-- Slider a -->
+                <div>
+                    <div class="flex justify-between text-sm font-medium mb-1">
+                        <label for="sliderA" class="text-slate-300">Nilai a <span class="text-xs text-slate-400">(Kelengkungan)</span></label>
+                        <span id="valA" class="font-mono text-amber-400">-0.12</span>
+                    </div>
+                    <input type="range" id="sliderA" min="-0.30" max="-0.03" step="0.01" value="-0.12" class="w-full accent-amber-500 cursor-pointer">
+                </div>
+
+                <!-- Slider b -->
+                <div>
+                    <div class="flex justify-between text-sm font-medium mb-1">
+                        <label for="sliderB" class="text-slate-300">Nilai b <span class="text-xs text-slate-400">(Kemiringan Awal)</span></label>
+                        <span id="valB" class="font-mono text-amber-400">1.10</span>
+                    </div>
+                    <input type="range" id="sliderB" min="0.20" max="2.50" step="0.05" value="1.10" class="w-full accent-amber-500 cursor-pointer">
+                </div>
+
+                <!-- Slider c -->
+                <div>
+                    <div class="flex justify-between text-sm font-medium mb-1">
+                        <label for="sliderC" class="text-slate-300">Nilai c <span class="text-xs text-slate-400">(Tinggi Awal Lemparan)</span></label>
+                        <span id="valC" class="font-mono text-amber-400">2.0 m</span>
+                    </div>
+                    <input type="range" id="sliderC" min="1.5" max="2.5" step="0.1" value="2.0" class="w-full accent-amber-500 cursor-pointer">
+                </div>
+
+                <!-- Tombol Aksi -->
+                <button id="btnShoot" class="w-full py-3 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold rounded-xl shadow-lg transition duration-200 flex items-center justify-center gap-2">
+                    <span>🚀</span> Lempar Bola Basket
+                </button>
+
+                <!-- Informasi Analisis Matematika -->
+                <div class="bg-slate-900/60 p-4 rounded-xl border border-slate-700 text-xs space-y-2 font-mono text-slate-300">
+                    <p class="text-amber-400 font-bold font-sans text-sm mb-1">Analisis Matematika:</p>
+                    <p>Persamaan: <span id="eqText" class="text-amber-300 font-semibold">-</span></p>
+                    <p>Tinggi Maks (Puncak): <span id="peakText" class="text-slate-100 font-semibold">-</span></p>
+                    <p>Tinggi Bola di Ring: <span id="heightAtRingText" class="text-slate-100 font-semibold">-</span></p>
+                    <p>Tinggi Ring Standard: <span class="text-emerald-400 font-semibold">3.05 m</span></p>
+                </div>
+            </div>
+
+            <!-- Panel Visualisasi Canvas -->
+            <div class="lg:col-span-8 bg-slate-800 p-4 rounded-2xl border border-slate-700 shadow-lg flex flex-col justify-center items-center">
+                <canvas id="courtCanvas" width="800" height="480" class="w-full h-auto bg-slate-950 rounded-xl border border-slate-700 cursor-crosshair"></canvas>
+                <div class="w-full flex justify-between text-xs text-slate-400 mt-3 px-2">
+                    <span>Pemain (x = 0m)</span>
+                    <span>Sumbu Horizontal: Jarak (m) | Sumbu Vertikal: Tinggi (m)</span>
+                    <span id="ringPosLabel">Ring (x = 6.5m)</span>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('courtCanvas');
+        const ctx = canvas.getContext('2d');
+
+        const WORLD_WIDTH = 11;
+        const WORLD_HEIGHT = 6.5;
+        const RING_HEIGHT = 3.05;
+
+        const sliderA = document.getElementById('sliderA');
+        const sliderB = document.getElementById('sliderB');
+        const sliderC = document.getElementById('sliderC');
+        const sliderRing = document.getElementById('sliderRing');
+        const btnShoot = document.getElementById('btnShoot');
+
+        let isAnimating = false;
+        let animProgress = 0;
+        let animId = null;
+
+        function toCanvasX(xMeter) {
+            const padding = 50;
+            return padding + (xMeter / WORLD_WIDTH) * (canvas.width - padding * 2);
+        }
+
+        function toCanvasY(yMeter) {
+            const paddingBottom = 50;
+            const paddingTop = 30;
+            const usableHeight = canvas.height - paddingBottom - paddingTop;
+            return canvas.height - paddingBottom - (yMeter / WORLD_HEIGHT) * usableHeight;
+        }
+
+        function f(x, a, b, c) {
+            return a * x * x + b * x + c;
+        }
+
+        function render() {
+            const a = parseFloat(sliderA.value);
+            const b = parseFloat(sliderB.value);
+            const c = parseFloat(sliderC.value);
+            const xRing = parseFloat(sliderRing.value);
+
+            document.getElementById('valA').innerText = a.toFixed(2);
+            document.getElementById('valB').innerText = b.toFixed(2);
+            document.getElementById('valC').innerText = c.toFixed(1) + " m";
+            document.getElementById('valRing').innerText = xRing.toFixed(1) + " m";
+            document.getElementById('ringPosLabel').innerText = `Ring (x = ${xRing.toFixed(1)}m)`;
+
+            const xPuncak = -b / (2 * a);
+            const yPuncak = f(xPuncak, a, b, c);
+            const yAtRing = f(xRing, a, b, c);
+
+            document.getElementById('eqText').innerText = `y = ${a}x² + ${b}x + ${c}`;
+            document.getElementById('peakText').innerText = `(${xPuncak.toFixed(2)}m, ${yPuncak.toFixed(2)}m)`;
+            document.getElementById('heightAtRingText').innerText = `${yAtRing.toFixed(2)} m`;
+
+            const diff = Math.abs(yAtRing - RING_HEIGHT);
+            const badge = document.getElementById('statusBadge');
+            
+            if (diff <= 0.25) {
+                badge.className = "px-4 py-2 rounded-xl text-sm font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/40";
+                badge.innerText = "🎯 SWISH! Masuk Ke Ring!";
+            } else if (yAtRing < RING_HEIGHT) {
+                badge.className = "px-4 py-2 rounded-xl text-sm font-bold bg-rose-500/20 text-rose-400 border border-rose-500/40";
+                badge.innerText = "📉 Lemparan Terlalu Rendah / Pendek";
+            } else {
+                badge.className = "px-4 py-2 rounded-xl text-sm font-bold bg-amber-500/20 text-amber-400 border border-amber-500/40";
+                badge.innerText = "📈 Lemparan Terlalu Tinggi";
+            }
+
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            drawGrid();
+            drawPlayer(c);
+            drawHoop(xRing);
+            drawTrajectory(a, b, c, xPuncak, yPuncak);
+
+            if (isAnimating) {
+                drawBallOnTrajectory(a, b, c, xRing);
+            }
+        }
+
+        function drawGrid() {
+            ctx.strokeStyle = '#334155';
+            ctx.lineWidth = 1;
+
+            ctx.beginPath();
+            ctx.strokeStyle = '#64748b';
+            ctx.lineWidth = 2;
+            ctx.moveTo(toCanvasX(0) - 20, toCanvasY(0));
+            ctx.lineTo(toCanvasX(WORLD_WIDTH) + 20, toCanvasY(0));
+            ctx.stroke();
+
+            ctx.font = '10px monospace';
+            ctx.fillStyle = '#64748b';
+            for (let x = 0; x <= WORLD_WIDTH; x += 1) {
+                const cx = toCanvasX(x);
+                ctx.beginPath();
+                ctx.strokeStyle = '#1e293b';
+                ctx.moveTo(cx, toCanvasY(0));
+                ctx.lineTo(cx, toCanvasY(WORLD_HEIGHT));
+                ctx.stroke();
+                ctx.fillText(`${x}m`, cx - 6, toCanvasY(0) + 18);
+            }
+
+            for (let y = 1; y <= WORLD_HEIGHT; y += 1) {
+                const cy = toCanvasY(y);
+                ctx.beginPath();
+                ctx.strokeStyle = '#1e293b';
+                ctx.moveTo(toCanvasX(0), cy);
+                ctx.lineTo(toCanvasX(WORLD_WIDTH), cy);
+                ctx.stroke();
+                ctx.fillText(`${y}m`, toCanvasX(0) - 28, cy + 3);
+            }
+        }
+
+        function drawPlayer(releaseHeight) {
+            const px = toCanvasX(0);
+            const pyFeet = toCanvasY(0);
+            const pyHands = toCanvasY(releaseHeight);
+
+            ctx.strokeStyle = '#f59e0b';
+            ctx.lineWidth = 4;
+
+            ctx.beginPath();
+            ctx.moveTo(px - 10, pyFeet);
+            ctx.lineTo(px, pyFeet - 30);
+            ctx.lineTo(px + 10, pyFeet);
+            ctx.stroke();
+
+            ctx.beginPath();
+            ctx.moveTo(px, pyFeet - 30);
+            ctx.lineTo(px, pyHands + 25);
+            ctx.stroke();
+
+            ctx.beginPath();
+            ctx.fillStyle = '#fde047';
+            ctx.arc(px, pyHands + 12, 10, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.strokeStyle = '#fde047';
+            ctx.beginPath();
+            ctx.moveTo(px, pyHands + 25);
+            ctx.lineTo(px + 12, pyHands + 5);
+            ctx.stroke();
+        }
+
+        function drawHoop(xRing) {
+            const rx = toCanvasX(xRing);
+            const ry = toCanvasY(RING_HEIGHT);
+
+            ctx.strokeStyle = '#94a3b8';
+            ctx.lineWidth = 5;
+            ctx.beginPath();
+            ctx.moveTo(rx + 15, toCanvasY(0));
+            ctx.lineTo(rx + 15, ry - 30);
+            ctx.lineTo(rx + 5, ry);
+            ctx.stroke();
+
+            ctx.strokeStyle = '#ffffff';
+            ctx.lineWidth = 4;
+            ctx.beginPath();
+            ctx.moveTo(rx + 8, ry - 35);
+            ctx.lineTo(rx + 8, ry + 25);
+            ctx.stroke();
+
+            ctx.strokeStyle = '#ef4444';
+            ctx.lineWidth = 4;
+            ctx.beginPath();
+            ctx.moveTo(rx - 12, ry);
+            ctx.lineTo(rx + 8, ry);
+            ctx.stroke();
+
+            ctx.strokeStyle = '#f8fafc';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(rx - 10, ry);
+            ctx.lineTo(rx - 6, ry + 18);
+            ctx.lineTo(rx + 2, ry + 18);
+            ctx.lineTo(rx + 6, ry);
+            ctx.stroke();
+        }
+
+        function drawTrajectory(a, b, c, xPuncak, yPuncak) {
+            ctx.beginPath();
+            ctx.strokeStyle = '#38bdf8';
+            ctx.lineWidth = 2.5;
+            ctx.setLineDash([6, 4]);
+
+            let started = false;
+            for (let x = 0; x <= WORLD_WIDTH; x += 0.05) {
+                const y = f(x, a, b, c);
+                if (y < 0) break;
+
+                const cx = toCanvasX(x);
+                const cy = toCanvasY(y);
+
+                if (!started) {
+                    ctx.moveTo(cx, cy);
+                    started = true;
+                } else {
+                    ctx.lineTo(cx, cy);
+                }
+            }
+            ctx.stroke();
+            ctx.setLineDash([]);
+
+            if (xPuncak > 0 && xPuncak < WORLD_WIDTH) {
+                const px = toCanvasX(xPuncak);
+                const py = toCanvasY(yPuncak);
+
+                ctx.fillStyle = '#f43f5e';
+                ctx.beginPath();
+                ctx.arc(px, py, 5, 0, Math.PI * 2);
+                ctx.fill();
+
+                ctx.font = '11px sans-serif';
+                ctx.fillStyle = '#f43f5e';
+                ctx.fillText(`Puncak (${xPuncak.toFixed(1)}m, ${yPuncak.toFixed(1)}m)`, px - 35, py - 10);
+            }
+        }
+
+        function drawBallOnTrajectory(a, b, c, xRing) {
+            const currentX = animProgress * (xRing + 0.5);
+            const currentY = f(currentX, a, b, c);
+
+            const bx = toCanvasX(currentX);
+            const by = toCanvasY(currentY);
+
+            ctx.fillStyle = '#ea580c';
+            ctx.beginPath();
+            ctx.arc(bx, by, 9, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.strokeStyle = '#000000';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.arc(bx, by, 9, 0, Math.PI);
+            ctx.stroke();
+        }
+
+        function startShotAnimation() {
+            if (isAnimating) cancelAnimationFrame(animId);
+
+            isAnimating = true;
+            animProgress = 0;
+
+            function step() {
+                animProgress += 0.015;
+                render();
+
+                if (animProgress <= 1.0) {
+                    animId = requestAnimationFrame(step);
+                } else {
+                    isAnimating = false;
+                }
+            }
+            step();
+        }
+
+        sliderA.addEventListener('input', render);
+        sliderB.addEventListener('input', render);
+        sliderC.addEventListener('input', render);
+        sliderRing.addEventListener('input', render);
+        btnShoot.addEventListener('click', startShotAnimation);
+
+        render();
+    </script>
+</body>
+</html>
